@@ -1,0 +1,89 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongo-secret
+  namespace: default
+  labels:
+    app: weblog
+    type: database
+type: Opaque
+data:
+  root_username: YWRtaW4=
+  root_password: UGFzc3cwcmQ=
+  weblog_username: dXNlcg==  #user
+  weblog_password: d2VsY29tZQ== # welcome
+  keyfile: TkpCdk1lWDRDUHcxV1c2aXkvTGoxMkpqRlYySUg2TzNqbWRpYmRyT285Y1d0VlRENmduSTNER0ZWYW04MWRTUUI1UUM2WUZnZ1dhUWFDVUZkcnNlc1kyeS9XMzNxSzU2S25Cd05aSHpWUDVMcGZrcEh5ZUFDWGsvRXhBWXh0dFN0Y2tPNGM4WDUzazhEUVptdUhtejdiazhLTlltdXJnaHNwdStLcFpJRkU3R1hUL0xhcG43bkR2elVmQlRIM3JGTHgyRklaWnYwWGtHaHVwN2lseE1iQU95cUVVNDZUWG45ZVlEek9yTmxJb0lxdmsybUNTTWlNeW90RVozYTA2R0hIMkJCNGhlY21ad0JjTTJRbzhpUG1kQ1UvT0g0N1Y5M3RORFYycFRvVXc5Q3JIR2Z0QW8vUW9lSGQrbVdNMlpjWHpaZi9OYUxaQW9YUTVMUHk1QW04b0VtZm92SGxnbDhjdUxiRjJqYzBaaUJmQ0dZOUluUkhvYmhLbVNKN1BzZlBGU2laSDNSaWRZeG9ONXVNVHA4aVhrU1VodkxqUkNIMVJ6RWZEMjdDVnVzZ2JsVFhJNkNIUFFVSEpVM1BMdGl0azRHcWUwOHFvaUlxSmlCMFZwMk9FcmNFOEUvUXpvYVZQWkxGSE9mTVhmemN5Mi9tMlBmMi9lUWpQL2Z6Sjh0Mk9Ta1M5WEUvbFRPSisxRmpUQVNieHI0dHQvYTlYL0JHbHJJTXRuTUJLK1BnTTdRTXdsQUZ6Y1pQRlBORTlOdHl4cTJFcjBqMXdGdmZta1ZIVDkwS3E1b0dPRnhCQVBQUmxxSS9iUEdPN2Z6aGYxRytrSFFTTG8wSmFEWXJxTzdGc2Y2LytwemtTbHpibFdqZjRnODh0K2dZK2NjaTVxSml5NWRIREo0c1N4dGg3SmVjMFVrMGhiblk2TXFIZ2ltdlozRzZsTklPWkhpQ1BVRjd5NmNHbVM5bTRUNTlSZUFrUDdJTWE0d0xlQi96WWU5UUtrUmtyOGNJSkZkSEpIVWE1ZjZydmRxeG9odjNiOS9lby9PODZ1QXlod1EraUZpV2FKZXRtSHdxNlRjdllzZXVDRC9MV1QzYlBOdXJ5SkdCUzFSVzFueVhjMXZZTEtzTWtlZ3FZNWhCMFcrTXJiZkd2TXY3a2NlNnRvb3RadURRcXNjL1ZZZkV5Ly96Tkhudi8yUXJDclJTa3ZoU21sT0ZhaTh5cW9hc3YyenpKejJQWVpTQ1N3QTlsWWxQQUVlMlBpdlFTVTROa3dKRDJ5Q2RFMjBrQXozK2swckxBWnEyUmxVQm9Vczc0UjVhK3lpZklaSjIwK1M4S1VqZzgrbXZRTjV5RElBUWxrcGVmNQo=
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-svc
+  namespace: default
+  labels:
+    app: weblog
+    type: application
+spec:
+  ports:
+  - port: 3000
+    targetPort: 3000
+  selector:
+    app: weblog
+    type: application
+
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nodeapp
+  namespace: default
+  labels:
+    app: weblog
+    type: application
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: weblog
+      type: application
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  revisionHistoryLimit: 14
+  template:
+    metadata:
+      name: nodeapp
+      namespace: default
+      labels:
+        app: weblog
+        type: application
+    spec:
+      containers:
+      - name: node
+        image: deutch02/weblog-app:v1.0.0
+        ports:
+        - containerPort: 3000
+        env:
+        - name: "MONGODB_USERNAME"
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: weblog_username
+        - name: "MONGODB_PASSWORD"
+          valueFrom:
+            secretKeyRef:
+              name: mongo-secret
+              key: weblog_password
+        - name: "MONGODB_HOSTS"
+          value: "mongo-0.db-svc:27017,mongo-1.db-svc:27017,mongo-2.db-svc:27017"
+        - name: "MONGODB_DATABASE"
+          value: "weblog"
+        - name: "MONGODB_REPLICASET"
+          value: "rs0"
+
+
